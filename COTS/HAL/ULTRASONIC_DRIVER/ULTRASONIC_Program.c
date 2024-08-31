@@ -3,7 +3,7 @@
  *
  *  Created on: Apr 7, 2024
  *      Author: Abdelrahman (Ta'laab) Mohammed
- *		Github: https://github.com/AbdelrahmanMohammed002
+ *      Github: https://github.com/AbdelrahmanMohammed002
  */
 
 #include "../../LIB/STD_TYPES.h"
@@ -21,8 +21,6 @@
 volatile u8 global_u8Flag = 0;
 volatile u16 global_u16HighTime = 0;
 
-
-
 // Function Prototypes
 void ICU_ISR_UltrasonicEdgeProcessing(void);
 
@@ -36,22 +34,21 @@ void ICU_ISR_UltrasonicEdgeProcessing(void);
  * Capture Unit (ICU) mode to measure the echo signal.
  */
 void HUltrasonic_vInit(void) {
-
-	//configure timer1 for ICU mode
-	MTIMER1_vInit();
-	//configure ICU edge capture on Rising
-	MTIMER1_vSetInputCaptureEdge(RISING);
-	//set the value of the ICR
-	MTIMER1_vSetICR1Value(0);
-	//set the value of the TCNT1
-	MTIMER1_vSetOVFRegister(0);
-	//set the call back function for the ICU's interrupt
-	MTIMER1_vSetInputCaptureCallBack(&ICU_ISR_UltrasonicEdgeProcessing);
-	// General interrupts must be enabled in main for the ICU interrupt
-	MTIMER1_vEnableInputCaptureINT();
-	//configure the pins of the trigger and the echo pins
-	MDIO_vSetPinDirection(ULTRASONIC_PORT, TRIGGER, OUTPUT);
-	MDIO_vSetPinDirection(ULTRASONIC_PORT, ECHO, INPUT);
+    // Configure Timer1 for ICU mode
+    MTIMER1_vInit();
+    // Configure ICU edge capture on Rising
+    MTIMER1_vSetInputCaptureEdge(RISING);
+    // Set the value of the ICR
+    MTIMER1_vSetICR1Value(0);
+    // Set the value of the TCNT1
+    MTIMER1_vSetOVFRegister(0);
+    // Set the callback function for the ICU's interrupt
+    MTIMER1_vSetInputCaptureCallBack(&ICU_ISR_UltrasonicEdgeProcessing);
+    // General interrupts must be enabled in main for the ICU interrupt
+    MTIMER1_vEnableInputCaptureINT();
+    // Configure the pins of the trigger and the echo pins
+    MDIO_vSetPinDirection(ULTRASONIC_PORT, TRIGGER, OUTPUT);
+    MDIO_vSetPinDirection(ULTRASONIC_PORT, ECHO, INPUT);
 }
 
 /**
@@ -61,11 +58,9 @@ void HUltrasonic_vInit(void) {
  * pulse on the trigger pin.
  */
 void HUltrasonic_vTrigger(void) {
-
-	MDIO_vSetPinValue(ULTRASONIC_PORT, TRIGGER, HIGH);
-	_delay_us(10);
-	MDIO_vSetPinValue(ULTRASONIC_PORT, TRIGGER, LOW);
-
+    MDIO_vSetPinValue(ULTRASONIC_PORT, TRIGGER, HIGH);
+    _delay_us(10);
+    MDIO_vSetPinValue(ULTRASONIC_PORT, TRIGGER, LOW);
 }
 
 /**
@@ -90,14 +85,18 @@ void HUltrasonic_vTrigger(void) {
  * @return Unsigned 16-bit integer representing the distance in centimeters.
  */
 u16 HUltrasonic_u16ReadDistance(void) {
+    HUltrasonic_vTrigger(); // Trigger the ultrasonic sensor
+    f32 local_u16Distance = 0;
 
-	HUltrasonic_vTrigger(); // Trigger the ultrasonic sensor
-	u16 local_u16Distance = 0;
+    // Wait for the measurement to complete
+    while (global_u8Flag != 0) {
+        // busy wait
+    }
 
-	// Calculate distance based on high time and speed of sound
-	local_u16Distance = (global_u16HighTime) * 0.017;
-	// we plus one as most values is between 0.6 and 0.8 so we round it to 1
-	return local_u16Distance +1;
+    // Calculate distance based on high time and speed of sound
+    local_u16Distance = (global_u16HighTime) * (0.0173);
+    // Round up the distance for more accurate reading
+    return local_u16Distance ;
 }
 
 /**
@@ -107,19 +106,14 @@ u16 HUltrasonic_u16ReadDistance(void) {
  * to measure the high time which corresponds to the distance.
  */
 void ICU_ISR_UltrasonicEdgeProcessing(void) {
+    global_u8Flag++;
 
-	global_u8Flag++;
-
-	if (global_u8Flag == 1) {
-
-		MTIMER1_vSetOVFRegister(0);
-		MTIMER1_vSetInputCaptureEdge(FALLING);
-
-	} else if (global_u8Flag == 2) {
-
-		global_u16HighTime = MTIMER1_u16InputCaptureValue();
-		MTIMER1_vSetInputCaptureEdge(RISING);
-		global_u8Flag = 0;
-
-	}
+    if (global_u8Flag == 1) {
+        MTIMER1_vSetOVFRegister(0);
+        MTIMER1_vSetInputCaptureEdge(FALLING);
+    } else if (global_u8Flag == 2) {
+        global_u16HighTime = MTIMER1_u16InputCaptureValue();
+        MTIMER1_vSetInputCaptureEdge(RISING);
+        global_u8Flag = 0;
+    }
 }
